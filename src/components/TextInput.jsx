@@ -1,4 +1,4 @@
-const TextInput = ({ field, error, ...rest }) => (
+const TextInput = ({ field, error, caption, ...rest }) => (
   <div className="flex flex-col gap-1">
     <label htmlFor={field} className="text-sm font-medium">
       {field}
@@ -10,6 +10,7 @@ const TextInput = ({ field, error, ...rest }) => (
         ${error ? "border-red-500 focus:ring-red-500" : "focus:ring-blue-500"}`}
       {...rest}
     />
+    {caption && <p className="text-xs text-gray-400">{caption}</p>}
     {error && <p className="text-xs text-red-600">{error}</p>}
   </div>
 );
