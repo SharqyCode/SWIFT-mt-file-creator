@@ -32,6 +32,48 @@ const fieldPlaceholder = {
 };
 
 const SwiftFileForm = () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const payload = {
+      block1: "F01ABDIEGCAXXX00000000000",
+      block2: "01030000991231BARC--NULL--X00000000009912310000N",
+      block3: "{108:25C0816470809700}{111:001}",
+
+      ref: values["20"],
+      operation: values["23B"] || "CRED",
+
+      date: values["32A"].slice(0, 6),
+      currency: values["32A"].slice(6, 9),
+      amount: values["32A"].slice(9),
+
+      sender: values["50K"],
+      senderBank: values["52A"],
+      receiverBank: values["57A"],
+      receiver: values["59"],
+
+      charges: values["71A"] || "BEN",
+      detailsOfCharges: values["71F"],
+    };
+
+    try {
+      const response = await fetch("http://localhost:5000/api/swift/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) throw new Error("Failed to save SWIFT file");
+
+      const data = await response.json();
+      console.log("File saved on server at:", data.path);
+      alert(`SWIFT file saved on server at:\n${data.path}`);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to generate SWIFT file");
+    }
+  };
+
   const [values, setValues] = useState(
     Object.fromEntries(FIELDS.map((f) => [f, ""])),
   );
@@ -86,7 +128,7 @@ const SwiftFileForm = () => {
     <div className="max-w-xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl font-bold text-center">Swift File Creation</h1>
       <div className="flex flex-col md:flex-row gap-8">
-        <form className="space-y-8 min-w-64">
+        <form className="space-y-8 min-w-64" onSubmit={handleSubmit}>
           {/* File Type */}
           <section className="space-y-4">
             <h3 className="font-semibold">File Type</h3>
@@ -315,6 +357,12 @@ const SwiftFileForm = () => {
                 caption="ex: USD25"
               />
             </div>
+            <button
+              type="submit"
+              className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+            >
+              Generate & Download SWIFT
+            </button>
           </section>
         </form>
 
