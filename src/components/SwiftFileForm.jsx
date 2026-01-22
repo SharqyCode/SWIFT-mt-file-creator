@@ -3,6 +3,9 @@ import TextInput from "./TextInput";
 import validationRules from "../utils/validationRules";
 import { formatAmount, formatDateYYMMDD } from "../utils/formatters";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
 const FIELDS = [
   "20",
   "23B",
@@ -17,51 +20,35 @@ const FIELDS = [
   "71F",
 ];
 
-const fieldPlaceholder = {
-  20: "Reference No.",
-  "23B": "CRED",
-  "32A": "DateCurrencyAmount",
-  "33B": "CurrencyAmount",
-  "50K": "Creditor IBAN, Name, Address",
-  "52A": "Sender BIC",
-  "57A": "Receiver BIC",
-  59: "Receiver IBAN",
-  70: "Transaction Purpose",
-  "71A": "BEN",
-  "71F": "CurrencyCharge",
-};
+// const fieldPlaceholder = {
+//   20: "Reference No.",
+//   "23B": "CRED",
+//   "32A": "DateCurrencyAmount",
+//   "33B": "CurrencyAmount",
+//   "50K": "Creditor IBAN, Name, Address",
+//   "52A": "Sender BIC",
+//   "57A": "Receiver BIC",
+//   59: "Receiver IBAN",
+//   70: "Transaction Purpose",
+//   "71A": "BEN",
+//   "71F": "CurrencyCharge",
+// };
 
 const SwiftFileForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const payload = {
-      block1: "F01ABDIEGCAXXX00000000000",
-      block2: "01030000991231BARC--NULL--X00000000009912310000N",
-      block3: "{108:25C0816470809700}{111:001}",
-
-      ref: values["20"],
-      operation: values["23B"] || "CRED",
-
-      date: values["32A"].slice(0, 6),
-      currency: values["32A"].slice(6, 9),
-      amount: values["32A"].slice(9),
-
-      sender: values["50K"],
-      senderBank: values["52A"],
-      receiverBank: values["57A"],
-      receiver: values["59"],
-
-      charges: values["71A"] || "BEN",
-      detailsOfCharges: values["71F"],
-    };
+    console.log(finalText);
 
     try {
-      const response = await fetch("http://localhost:5000/api/swift/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/swift/save`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: finalText,
+        },
+      );
 
       if (!response.ok) throw new Error("Failed to save SWIFT file");
 
@@ -84,11 +71,24 @@ const SwiftFileForm = () => {
   });
   const [fileType, setFileType] = useState("SWIFT");
 
+  const [finalText, setFinalText] = useState("");
+
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     setValues((prev) => ({ ...prev, ["23B"]: "CRED", ["71A"]: "BEN" }));
   }, []);
+
+  const fileTxt =
+    `{1:F01ABDIEGCAXXX00000000000}{2:01030000991231BARC${values["52A"].slice(4) || "--NULL--"}X00000000009912310000N}{3:${fileType == "RTGS" ? "{103:PEG}" : ""}{108:25C0816470809700}{111:001}{121:b586d8f5-10fe-43f0-ad0d-40cb466486f6}}{4:\n` +
+    FIELDS.map((field) => `:${field}:${values[field]}`).join("\n") +
+    `,\n-}`;
+
+  const allFilled = Object.values(values).every((value) => value.trim() !== "");
+
+  useEffect(() => {
+    setFinalText(fileTxt);
+  }, [allFilled]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -104,6 +104,8 @@ const SwiftFileForm = () => {
       [name]: rule.regex.test(value) ? "" : rule.error,
     }));
   };
+
+  console.log(finalText);
 
   const handleAmountChange = (e) => {
     const { name, value } = e.target;
@@ -121,8 +123,6 @@ const SwiftFileForm = () => {
       "33B": ccy && amt ? `${ccy}${amt}` : "",
     }));
   };
-
-  const allFilled = Object.values(values).every((value) => value.trim() !== "");
 
   return (
     <div className="max-w-xl mx-auto p-6 space-y-6">
@@ -359,7 +359,8 @@ const SwiftFileForm = () => {
             </div>
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+              disabled={!allFilled}
+              className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-300"
             >
               Generate & Download SWIFT
             </button>
@@ -370,9 +371,7 @@ const SwiftFileForm = () => {
           <h2 className="font-semibold mb-2">Preview</h2>
 
           <pre className="bg-gray-100 p-4 rounded-md text-sm whitespace-pre-wrap">
-            {`{1:F01ABDIEGCAXXX00000000000}{2:01030000991231BARC${values["52A"].slice(4) || "--NULL--"}X00000000009912310000N}{3:${fileType == "RTGS" ? "{103:PEG}" : ""}{108:25C0816470809700}{111:001}{121:b586d8f5-10fe-43f0-ad0d-40cb466486f6}}{4:\n` +
-              FIELDS.map((field) => `:${field}:${values[field]}`).join("\n") +
-              `,\n-}`}
+            {fileTxt}
           </pre>
         </div>
       </div>
